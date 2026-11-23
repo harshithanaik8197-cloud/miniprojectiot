@@ -66,9 +66,9 @@ static gapAdStructure_t advScanStruct[3] = {
     .aData = (uint8_t *)uuid_service_wireless_uart
   },
   {
-    .adType = gAdCompleteLocalName_c,
-    .length = 15,
-    .aData = (uint8_t*)"RFID_INVENTORY"
+    .adType = gAdShortenedLocalName_c,
+    .length = 5,
+    .aData = (uint8_t*)"RFID"
   }
 };
 
@@ -78,10 +78,18 @@ gapAdvertisingData_t gAppAdvertisingData =
     (void *)advScanStruct
 };
 
+static gapAdStructure_t scanRspStruct[1] = {
+  {
+    .adType = gAdCompleteLocalName_c,
+    .length = 15,
+    .aData = (uint8_t*)"RFID_INVENTORY"
+  }
+};
+
 gapScanResponseData_t gAppScanRspData =
 {
-    0,
-    NULL
+    NumberOfElements(scanRspStruct),
+    (void *)scanRspStruct
 };
 
 gapScanningParameters_t gScanParams =

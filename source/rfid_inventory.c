@@ -416,34 +416,70 @@ static void DelayMs(uint32_t ms)
 
 static void Inventory_Init(void)
 {
-    mInventoryCount = 3;
+    mInventoryCount = 7;
 
-    /* Product 1: Laptop */
+    /* Product 1: Laptop (UID: 2E 6D 9E 04) */
     mInventory[0].productId = 1001;
-    mInventory[0].uid[0] = 0xA1; mInventory[0].uid[1] = 0xB2;
-    mInventory[0].uid[2] = 0xC3; mInventory[0].uid[3] = 0xD4;
+    mInventory[0].uid[0] = 0x2E; mInventory[0].uid[1] = 0x6D;
+    mInventory[0].uid[2] = 0x9E; mInventory[0].uid[3] = 0x04;
     FLib_MemCpy(mInventory[0].productName, "Laptop", 7);
     mInventory[0].stockCount = 10;
     mInventory[0].lastAction = SCAN_ACTION_REMOVE;  /* First scan will trigger STOCK IN (ADD) */
     mInventory[0].valid = TRUE;
 
-    /* Product 2: Keyboard */
+    /* Product 2: Keyboard (UID: FA 76 26 02) */
     mInventory[1].productId = 1002;
-    mInventory[1].uid[0] = 0xE5; mInventory[1].uid[1] = 0xF6;
-    mInventory[1].uid[2] = 0xA7; mInventory[1].uid[3] = 0xB8;
+    mInventory[1].uid[0] = 0xFA; mInventory[1].uid[1] = 0x76;
+    mInventory[1].uid[2] = 0x26; mInventory[1].uid[3] = 0x02;
     FLib_MemCpy(mInventory[1].productName, "Keyboard", 9);
     mInventory[1].stockCount = 20;
     mInventory[1].lastAction = SCAN_ACTION_REMOVE;  /* First scan will trigger STOCK IN (ADD) */
     mInventory[1].valid = TRUE;
 
-    /* Product 3: Mouse */
+    /* Product 3: Mouse (UID: 23 8A 9C 04) */
     mInventory[2].productId = 1003;
-    mInventory[2].uid[0] = 0x11; mInventory[2].uid[1] = 0x22;
-    mInventory[2].uid[2] = 0x33; mInventory[2].uid[3] = 0x44;
+    mInventory[2].uid[0] = 0x23; mInventory[2].uid[1] = 0x8A;
+    mInventory[2].uid[2] = 0x9C; mInventory[2].uid[3] = 0x04;
     FLib_MemCpy(mInventory[2].productName, "Mouse", 6);
     mInventory[2].stockCount = 15;
     mInventory[2].lastAction = SCAN_ACTION_REMOVE;  /* First scan will trigger STOCK IN (ADD) */
     mInventory[2].valid = TRUE;
+
+    /* Product 4: Monitor (UID: 69 84 A0 04) */
+    mInventory[3].productId = 1004;
+    mInventory[3].uid[0] = 0x69; mInventory[3].uid[1] = 0x84;
+    mInventory[3].uid[2] = 0xA0; mInventory[3].uid[3] = 0x04;
+    FLib_MemCpy(mInventory[3].productName, "Monitor", 8);
+    mInventory[3].stockCount = 8;
+    mInventory[3].lastAction = SCAN_ACTION_REMOVE;  /* First scan will trigger STOCK IN (ADD) */
+    mInventory[3].valid = TRUE;
+
+    /* Product 5: Headset (UID: DA 17 9F 04) */
+    mInventory[4].productId = 1005;
+    mInventory[4].uid[0] = 0xDA; mInventory[4].uid[1] = 0x17;
+    mInventory[4].uid[2] = 0x9F; mInventory[4].uid[3] = 0x04;
+    FLib_MemCpy(mInventory[4].productName, "Headset", 8);
+    mInventory[4].stockCount = 12;
+    mInventory[4].lastAction = SCAN_ACTION_REMOVE;
+    mInventory[4].valid = TRUE;
+
+    /* Product 6: Webcam (UID: 94 21 4C 06) */
+    mInventory[5].productId = 1006;
+    mInventory[5].uid[0] = 0x94; mInventory[5].uid[1] = 0x21;
+    mInventory[5].uid[2] = 0x4C; mInventory[5].uid[3] = 0x06;
+    FLib_MemCpy(mInventory[5].productName, "Webcam", 7);
+    mInventory[5].stockCount = 14;
+    mInventory[5].lastAction = SCAN_ACTION_REMOVE;
+    mInventory[5].valid = TRUE;
+
+    /* Product 7: USB-Drive (UID: 93 3E 02 07) */
+    mInventory[6].productId = 1007;
+    mInventory[6].uid[0] = 0x93; mInventory[6].uid[1] = 0x3E;
+    mInventory[6].uid[2] = 0x02; mInventory[6].uid[3] = 0x07;
+    FLib_MemCpy(mInventory[6].productName, "USB-Drive", 10);
+    mInventory[6].stockCount = 25;
+    mInventory[6].lastAction = SCAN_ACTION_REMOVE;
+    mInventory[6].valid = TRUE;
 
     /* Clear remaining slots */
     for (uint8_t i = mInventoryCount; i < INVENTORY_MAX_PRODUCTS; i++)
@@ -470,7 +506,7 @@ static int Inventory_FindByUID(uint8_t uid[RC522_UID_SIZE])
 static void Inventory_ProcessTag(uint8_t uid[RC522_UID_SIZE])
 {
     int index;
-    char logBuf[160];
+    char logBuf[384];
     uint32_t totalSec = mTickCounter / 2U;
     uint32_t min = totalSec / 60U;
     uint32_t sec = totalSec % 60U;

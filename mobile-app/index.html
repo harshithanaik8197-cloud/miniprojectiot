@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="manifest.json">
+  <title>Smart RFID Inventory</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --accent-blue: #0284c7;
+      --accent-cyan: #06b6d4;
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.25);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.25);
+      --warning: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg);
+      background-image: radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.12) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      padding-bottom: 24px;
+    }
+
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 17, 32, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+    }
+
+    .brand-icon svg {
+      width: 20px;
+      height: 20px;
+      fill: white;
+    }
+
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    /* Connect Button */
+    .btn-connect {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: white;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(14, 165, 233, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-connect:active {
+      transform: scale(0.96);
+    }
+
+    .btn-connect.connected {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      box-shadow: none;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+
+    .status-dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 10px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.15); }
+    }
+
+    /* Main Container */
+    main {
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Stat Cards */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      backdrop-filter: blur(8px);
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-val {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    /* Product Grid */
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .product-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .product-card.updated-in {
+      animation: flash-green 1s ease-out;
+    }
+
+    .product-card.updated-out {
+      animation: flash-orange 1s ease-out;
+    }
+
+    @keyframes flash-green {
+      0% { border-color: var(--success); box-shadow: 0 0 20px var(--success-glow); }
+      100% { border-color: var(--card-border); box-shadow: none; }
+    }
+
+    @keyframes flash-orange {
+      0% { border-color: var(--warning); box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); }
+      100% { border-color: var(--card-border); box-shadow: none; }
+    }
+
+    .prod-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .prod-icon {
+      font-size: 1.8rem;
+    }
+
+    .prod-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+    }
+
+    .badge-in {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .badge-low {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .prod-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .prod-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: white;
+    }
+
+    .prod-stock-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .prod-stock {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .prod-unit {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Activity Feed */
+    .feed-container {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+
+    .feed-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 10px;
+      border-left: 4px solid var(--card-border);
+      animation: slide-in 0.3s ease-out;
+    }
+
+    .feed-item.in {
+      border-left-color: var(--success);
+    }
+
+    .feed-item.out {
+      border-left-color: var(--warning);
+    }
+
+    .feed-item.alert {
+      border-left-color: var(--danger);
+    }
+
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .feed-details {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .feed-action {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .feed-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .feed-time {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    /* Security Alert Banner */
+    .alert-banner {
+      display: none;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: shake 0.4s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-4px); }
+      40%, 80% { transform: translateX(4px); }
+    }
+
+    /* Simulation Control / Offline bar */
+    .demo-bar {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+      </div>
+      <div>
+        <div class="brand-title">Smart Inventory</div>
+        <div class="brand-sub">FRDM-MCXW71 BLE</div>
+      </div>
+    </div>
+    <button id="btnConnect" class="btn-connect" onclick="toggleConnection()">
+      <span id="statusDot" class="status-dot"></span>
+      <span id="btnText">Connect BLE</span>
+    </button>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+
+    <!-- Top Key Metrics -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-label">Total Stock</span>
+        <span id="totalStock" class="stat-val">104</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Registered Items</span>
+        <span id="totalProducts" class="stat-val">7</span>
+      </div>
+    </div>
+
+    <!-- Alert Box (Hidden until triggered) -->
+    <div id="alertBox" class="alert-banner" style="display: none;">
+      <span style="font-size: 1.2rem;">⚠️</span>
+      <span id="alertMsg">Unknown tag rejected!</span>
+    </div>
+
+    <!-- Live Inventory Product Grid -->
+    <div>
+      <div class="section-head">
+        <span class="section-title">Product Stock</span>
+        <span style="font-size: 0.75rem; color: var(--text-muted);" id="lastSyncTime">Tap card to update</span>
+      </div>
+      <div class="product-grid" id="productGrid">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- Recent Live Activity Stream -->
+    <div>
+      <div class="section-head">
+        <span class="section-title">Live Scan Activity</span>
+        <button class="btn-secondary" style="flex: none; padding: 4px 10px; font-size: 0.7rem;" onclick="clearActivity()">Clear</button>
+      </div>
+      <div class="feed-container" id="feedContainer">
+        <div class="feed-item" style="border-left-color: var(--accent-blue);">
+          <div class="feed-details">
+            <span class="feed-action">System Ready</span>
+            <span class="feed-desc">Connect Bluetooth or tap cards to start tracking.</span>
+          </div>
+          <span class="feed-time">Ready</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Demo Simulation Controls (Useful if viewing on PC without Web Bluetooth) -->
+    <div class="demo-bar">
+      <button class="btn-secondary" onclick="simulateScan('Laptop', 'ADD')">Simulate 💻 Add</button>
+      <button class="btn-secondary" onclick="simulateScan('Webcam', 'REMOVE')">Simulate 📷 Remove</button>
+    </div>
+
+  </main>
+
+  <script>
+    // --------------------------------------------------------------------------
+    // BLE Configuration Constants (Matches FRDM-MCXW71 Firmware)
+    // --------------------------------------------------------------------------
+    const BLE_DEVICE_NAME    = 'RFID_INVENTORY';
+    const BLE_SERVICE_UUID   = '01ff0100-ba5e-f4ee-5ca1-eb1e5e4b1ce0';
+    const BLE_CHAR_UUID      = '01ff0101-ba5e-f4ee-5ca1-eb1e5e4b1ce0';
+
+    let bleDevice = null;
+    let bleChar = null;
+    let rxBuffer = '';
+
+    // --------------------------------------------------------------------------
+    // Product Database (Synced with source/rfid_inventory.c)
+    // --------------------------------------------------------------------------
+    const products = {
+      'Laptop':    { id: 1001, stock: 10, icon: '💻' },
+      'Keyboard':  { id: 1002, stock: 20, icon: '⌨️' },
+      'Mouse':     { id: 1003, stock: 15, icon: '🖱️' },
+      'Monitor':   { id: 1004, stock: 8,  icon: '🖥️' },
+      'Headset':   { id: 1005, stock: 12, icon: '🎧' },
+      'Webcam':    { id: 1006, stock: 14, icon: '📷' },
+      'USB-Drive': { id: 1007, stock: 25, icon: '💾' }
+    };
+
+    // Render Product Cards
+    function renderProducts() {
+      const grid = document.getElementById('productGrid');
+      grid.innerHTML = '';
+      let total = 0;
+      let count = 0;
+
+      for (const [name, item] of Object.entries(products)) {
+        total += item.stock;
+        count++;
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.id = `card-${name}`;
+
+        const isLow = item.stock <= 2;
+        const badgeClass = isLow ? 'badge-low' : 'badge-in';
+        const badgeText = isLow ? 'LOW STOCK' : 'IN STOCK';
+
+        card.innerHTML = `
+          <div class="prod-top">
+            <span class="prod-icon">${item.icon}</span>
+            <span class="prod-badge ${badgeClass}" id="badge-${name}">${badgeText}</span>
+          </div>
+          <div class="prod-info">
+            <span class="prod-name">${name}</span>
+            <div class="prod-stock-wrap">
+              <span class="prod-stock" id="stock-${name}">${item.stock}</span>
+              <span class="prod-unit">units</span>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      }
+
+      document.getElementById('totalStock').textContent = total;
+      document.getElementById('totalProducts').textContent = count;
+    }
+
+    // --------------------------------------------------------------------------
+    // Web Bluetooth Connection Engine
+    // --------------------------------------------------------------------------
+    async function toggleConnection() {
+      if (bleDevice && bleDevice.gatt.connected) {
+        disconnectBLE();
+      } else {
+        connectBLE();
+      }
+    }
+
+    async function connectBLE() {
+      try {
+        if (!navigator.bluetooth) {
+          alert('Web Bluetooth is not supported on this browser.\nPlease use Google Chrome on Android or a Bluetooth-enabled PC.');
+          return;
+        }
+
+        document.getElementById('btnText').textContent = 'Connecting...';
+
+        bleDevice = await navigator.bluetooth.requestDevice({
+          filters: [
+            { name: BLE_DEVICE_NAME },
+            { namePrefix: 'RFID' }
+          ],
+          optionalServices: [BLE_SERVICE_UUID]
+        });
+
+        bleDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+        const server = await bleDevice.gatt.connect();
+        const service = await server.getPrimaryService(BLE_SERVICE_UUID);
+        bleChar = await service.getCharacteristic(BLE_CHAR_UUID);
+
+        await bleChar.startNotifications();
+        bleChar.addEventListener('characteristicvaluechanged', handleNotification);
+
+        setConnectedState(true);
+        addActivity('Bluetooth Connected', 'Live telemetry feed active from RFID_INVENTORY', 'in');
+        playBeep(880, 150);
+
+      } catch (err) {
+        console.error('BLE connection failed:', err);
+        setConnectedState(false);
+        if (err.name !== 'NotFoundError') {
+          alert('Failed to connect: ' + err.message);
+        }
+      }
+    }
+
+    function disconnectBLE() {
+      if (bleDevice && bleDevice.gatt.connected) {
+        bleDevice.gatt.disconnect();
+      }
+      setConnectedState(false);
+    }
+
+    function onDisconnected() {
+      setConnectedState(false);
+      addActivity('Bluetooth Disconnected', 'Connection lost to RFID_INVENTORY', 'alert');
+    }
+
+    function setConnectedState(isConnected) {
+      const dot = document.getElementById('statusDot');
+      const btn = document.getElementById('btnConnect');
+      const text = document.getElementById('btnText');
+
+      if (isConnected) {
+        dot.className = 'status-dot connected';
+        btn.className = 'btn-connect connected';
+        text.textContent = 'Connected';
+      } else {
+        dot.className = 'status-dot';
+        btn.className = 'btn-connect';
+        text.textContent = 'Connect BLE';
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // Notification & Telemetry Stream Parser
+    // --------------------------------------------------------------------------
+    function handleNotification(event) {
+      const decoder = new TextDecoder('utf-8');
+      const rawText = decoder.decode(event.target.value);
+      rxBuffer += rawText;
+
+      let newlineIndex;
+      while ((newlineIndex = rxBuffer.indexOf('\n')) >= 0) {
+        const line = rxBuffer.substring(0, newlineIndex).trim();
+        rxBuffer = rxBuffer.substring(newlineIndex + 1);
+        if (line.length > 0) {
+          processMessage(line);
+        }
+      }
+    }
+
+    function processMessage(msg) {
+      console.log('[BLE RX]:', msg);
+
+      // 1. ADD / REMOVE Stock Event (e.g. "ADD:Laptop:11" or "REMOVE:Keyboard:19")
+      if (msg.startsWith('ADD:') || msg.startsWith('REMOVE:')) {
+        const parts = msg.split(':');
+        if (parts.length >= 3) {
+          const action = parts[0];
+          const product = parts[1];
+          const newQty = parseInt(parts[2], 10);
+
+          updateProductStock(product, newQty, action);
+        }
+      }
+      // 2. Security / Unknown Tag Alert (e.g. "ALERT:UNKNOWN_TAG:A1B2C3D4")
+      else if (msg.startsWith('ALERT:UNKNOWN_TAG:')) {
+        const uid = msg.replace('ALERT:UNKNOWN_TAG:', '').trim();
+        showSecurityAlert(`Security Alert: Unknown tag (${uid}) rejected!`);
+        addActivity('Unknown RFID Scanned', `Tag UID ${uid} was rejected.`, 'alert');
+        playBeep(260, 400);
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      }
+      // 3. Out-of-Stock Alert (e.g. "ALERT:OUT_OF_STOCK:Laptop")
+      else if (msg.startsWith('ALERT:OUT_OF_STOCK:')) {
+        const prod = msg.replace('ALERT:OUT_OF_STOCK:', '').trim();
+        showSecurityAlert(`Out of Stock Alert: '${prod}' quantity is 0!`);
+        addActivity('Out of Stock', `'${prod}' cannot be decremented.`, 'alert');
+      }
+      // 4. Full Status Sync (e.g. "STATUS:Laptop:11,Keyboard:20,Mouse:15")
+      else if (msg.startsWith('STATUS:')) {
+        const payload = msg.replace('STATUS:', '').trim();
+        const items = payload.split(',');
+        items.forEach(item => {
+          const pair = item.split(':');
+          if (pair.length === 2) {
+            const pName = pair[0];
+            const pQty = parseInt(pair[1], 10);
+            if (products[pName]) {
+              products[pName].stock = pQty;
+            }
+          }
+        });
+        renderProducts();
+        addActivity('Inventory Sync', 'Full status updated from board button.', 'in');
+      }
+    }
+
+    // --------------------------------------------------------------------------
+    // UI Update Functions
+    // --------------------------------------------------------------------------
+    function updateProductStock(productName, newStock, action) {
+      if (!products[productName]) {
+        products[productName] = { id: 9999, stock: newStock, icon: '📦' };
+      } else {
+        products[productName].stock = newStock;
+      }
+
+      renderProducts();
+
+      // Trigger card animation
+      const card = document.getElementById(`card-${productName}`);
+      if (card) {
+        const animClass = action === 'ADD' ? 'updated-in' : 'updated-out';
+        card.classList.remove('updated-in', 'updated-out');
+        void card.offsetWidth; // Force CSS reflow
+        card.classList.add(animClass);
+      }
+
+      // Add to live activity feed
+      const isAdd = action === 'ADD';
+      const actionTitle = isAdd ? `STOCK IN: ${productName}` : `STOCK OUT: ${productName}`;
+      const actionDesc = `${productName} quantity now ${newStock} units.`;
+      addActivity(actionTitle, actionDesc, isAdd ? 'in' : 'out');
+
+      // Audio & Haptic Feedback
+      if (isAdd) {
+        playBeep(659, 120);
+        setTimeout(() => playBeep(880, 180), 120);
+      } else {
+        playBeep(440, 180);
+      }
+      if (navigator.vibrate) navigator.vibrate(80);
+    }
+
+    function addActivity(title, desc, type) {
+      const container = document.getElementById('feedContainer');
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      const item = document.createElement('div');
+      item.className = `feed-item ${type}`;
+      item.innerHTML = `
+        <div class="feed-details">
+          <span class="feed-action">${title}</span>
+          <span class="feed-desc">${desc}</span>
+        </div>
+        <span class="feed-time">${timeStr}</span>
+      `;
+
+      container.prepend(item);
+
+      // Keep only top 25 events
+      if (container.children.length > 25) {
+        container.removeChild(container.lastChild);
+      }
+
+      document.getElementById('lastSyncTime').textContent = `Updated ${timeStr}`;
+    }
+
+    function clearActivity() {
+      document.getElementById('feedContainer').innerHTML = '';
+    }
+
+    function showSecurityAlert(msg) {
+      const box = document.getElementById('alertBox');
+      document.getElementById('alertMsg').textContent = msg;
+      box.style.display = 'flex';
+      setTimeout(() => {
+        box.style.display = 'none';
+      }, 5000);
+    }
+
+    // Synthesized Web Audio Sound Beeps
+    function playBeep(freq, durationMs) {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (durationMs / 1000));
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + (durationMs / 1000));
+      } catch (e) {}
+    }
+
+    // Manual Simulation for Browser Testing
+    function simulateScan(product, action) {
+      const current = products[product] ? products[product].stock : 10;
+      const newQty = action === 'ADD' ? current + 1 : Math.max(0, current - 1);
+      processMessage(`${action}:${product}:${newQty}`);
+    }
+
+    // Initial render
+    renderProducts();
+  </script>
+</body>
+</html>
