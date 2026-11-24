@@ -884,14 +884,19 @@ static void BleApp_RfidInit(void)
         /* Initialize inventory database */
         Inventory_Init();
 
-        (void)snprintf(logBuf, sizeof(logBuf),
-                       "[INVENTORY] Local Database Initialized -> SUCCESS\r\n"
-                       "[PRODUCT]   Registered Products: %u items\r\n"
-                       "[PRODUCT]     1. ID: 1001 | Name: Laptop   | Stock: 10 | UID: A1 B2 C3 D4\r\n"
-                       "[PRODUCT]     2. ID: 1002 | Name: Keyboard | Stock: 20 | UID: E5 F6 A7 B8\r\n"
-                       "[PRODUCT]     3. ID: 1003 | Name: Mouse    | Stock: 15 | UID: 11 22 33 44\r\n",
-                       (unsigned int)mInventoryCount);
-        Serial_Print(logBuf, gAllowToBlock_d);
+        Serial_Print("[INVENTORY] Local Database Initialized -> SUCCESS\r\n", gAllowToBlock_d);
+        for (uint8_t i = 0; i < mInventoryCount; i++)
+        {
+            (void)snprintf(logBuf, sizeof(logBuf),
+                           "[PRODUCT]     %u. ID: %-4u | %-10s | Stock: %-2d | UID: %02X %02X %02X %02X\r\n",
+                           (unsigned int)(i + 1),
+                           (unsigned int)mInventory[i].productId,
+                           mInventory[i].productName,
+                           (int)mInventory[i].stockCount,
+                           mInventory[i].uid[0], mInventory[i].uid[1],
+                           mInventory[i].uid[2], mInventory[i].uid[3]);
+            Serial_Print(logBuf, gAllowToBlock_d);
+        }
 
         /* Startup beep to indicate system ready */
         Buzzer_BeepSuccess();
