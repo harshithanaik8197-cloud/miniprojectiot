@@ -129,16 +129,16 @@
 #define Serial_PrintHex(a)              (void)SerialManager_WriteBlocking((serial_write_handle_t)s_writeHandle, FORMAT_Hex2Ascii(a), strlen((const char*)FORMAT_Hex2Ascii(a)))
 
 /* Buzzer GPIO: PTC5 (PORTC, Pin 5)
- * MH-FMD is an Active LOW module ("低电平触发"):
- * - BUZZER_ON: pin drives LOW (0) -> Transistor conducts, buzzer sounds
- * - BUZZER_OFF: pin drives HIGH (1) -> Transistor shuts off, buzzer silent
+ * Standard 2-pin active buzzer (Active HIGH):
+ * - BUZZER_ON: pin drives HIGH (1) -> buzzer sounds
+ * - BUZZER_OFF: pin drives LOW (0)  -> buzzer silent
  */
 #define BUZZER_GPIO         GPIOC
 #define BUZZER_PORT         PORTC
 #define BUZZER_PIN          5U
 
-#define BUZZER_ON()         GPIO_PinWrite(BUZZER_GPIO, BUZZER_PIN, 0)
-#define BUZZER_OFF()        GPIO_PinWrite(BUZZER_GPIO, BUZZER_PIN, 1)
+#define BUZZER_ON()         GPIO_PinWrite(BUZZER_GPIO, BUZZER_PIN, 1)
+#define BUZZER_OFF()        GPIO_PinWrite(BUZZER_GPIO, BUZZER_PIN, 0)
 
 /************************************************************************************
  *************************************************************************************
@@ -851,10 +851,10 @@ static void BleApp_BuzzerInit(void)
     /* Enable clock for PORTC */
     CLOCK_EnableClock(kCLOCK_PortC);
 
-    /* Configure buzzer pin as GPIO output (Active Low: start HIGH/silent) */
+    /* Configure buzzer pin as GPIO output (Active High: start LOW/silent) */
     PORT_SetPinMux(BUZZER_PORT, BUZZER_PIN, kPORT_MuxAsGpio);
     gpioConfig.pinDirection = kGPIO_DigitalOutput;
-    gpioConfig.outputLogic = 1U;  /* Start OFF (Active LOW trigger) */
+    gpioConfig.outputLogic = 0U;  /* Start OFF (Active HIGH buzzer) */
     GPIO_PinInit(BUZZER_GPIO, BUZZER_PIN, &gpioConfig);
 
     Serial_Print("[GPIO]      PTC5 (Active Buzzer Pin) -> INITIALIZED\r\n", gAllowToBlock_d);
