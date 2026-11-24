@@ -74,9 +74,10 @@
 /* RC522 RFID Driver */
 #include "rc522_drv.h"
 
-/* GPIO for buzzer */
+/* GPIO / TPM for buzzer */
 #include "fsl_gpio.h"
 #include "fsl_port.h"
+#include "fsl_tpm.h"
 
 #if defined(K32W232H_SERIES) || defined(KW45B41Z82_SERIES) || defined(KW45B41Z83_SERIES) || defined(K32W1480_SERIES) || \
     defined(KW47B42ZB7_cm33_core0_SERIES) || defined(KW47B42ZB6_cm33_core0_SERIES) || defined(KW47B42ZB3_cm33_core0_SERIES) || \
@@ -128,17 +129,24 @@
 #define Serial_PrintDec(a)              (void)SerialManager_WriteBlocking((serial_write_handle_t)s_writeHandle, FORMAT_Dec2Str(a), strlen((char const *)FORMAT_Dec2Str(a)))
 #define Serial_PrintHex(a)              (void)SerialManager_WriteBlocking((serial_write_handle_t)s_writeHandle, FORMAT_Hex2Ascii(a), strlen((const char*)FORMAT_Hex2Ascii(a)))
 
-/* Buzzer GPIO: PTC5 (PORTC, Pin 5)
- * Standard 2-pin active buzzer (Active HIGH):
- * - BUZZER_ON: pin drives HIGH (1) -> buzzer sounds
- * - BUZZER_OFF: pin drives LOW (0)  -> buzzer silent
+/* Buzzer: PTC5 (Port C, Pin 5 -> Arduino Header J1, Pin 4 / D3)
+ * On MCXW71, PTC5 ALT5 is TPM1_CH4 (Timer/PWM Module 1, Channel 4)
+ * Driving with 2.7 kHz PWM wave (50% duty cycle) enables both:
+ * 1) Passive buzzer modules (which require an oscillating PWM tone)
+ * 2) Active buzzer modules (which respond to PWM signal as active audio)
  */
-#define BUZZER_GPIO         GPIOC
 #define BUZZER_PORT         PORTC
 #define BUZZER_PIN          5U
+#define BUZZER_TPM_BASE     TPM1
+#define BUZZER_TPM_CHNL     kTPM_Chnl_4
+#define BUZZER_PWM_FREQ_HZ  2700U     /* Resonant frequency for buzzer (2.7 kHz) */
+#define BUZZER_TPM_SRC_CLK  6000000U  /* FRO 6 MHz clock */
 
-#define BUZZER_ON()         GPIO_PinWrite(BUZZER_GPIO, BUZZER_PIN, 1)
-#define BUZZER_OFF()        GPIO_PinWrite(BUZZER_GPIO, BUZZER_PIN, 0)
+static void Buzzer_PwmOn(void);
+static void Buzzer_PwmOff(void);
+
+#define BUZZER_ON()         Buzzer_PwmOn()
+#define BUZZER_OFF()        Buzzer_PwmOff()
 
 /************************************************************************************
  *************************************************************************************
@@ -844,21 +852,54 @@ static void RfidScanTimerCallback(void *pParam)
 
 /* ========== HARDWARE & SUBSYSTEM INITIALIZATION ========== */
 
+/* ========== PWM BUZZER DRIVER (TPM1_CH4 on PTC5) ========== */
+
+static void Buzzer_PwmOn(void)
+{
+    /* Start TPM1 counter with FRO 6M clock source */
+    TPM_StartTimer(BUZZER_TPM_BASE, kTPM_SystemClock);
+}
+
+static void Buzzer_PwmOff(void)
+{
+    /* Stop counter to silence buzzer */
+    TPM_StopTimer(BUZZER_TPM_BASE);
+}
+
 static void BleApp_BuzzerInit(void)
 {
-    gpio_pin_config_t gpioConfig;
+    tpm_config_t tpmInfo;
+    tpm_chnl_pwm_signal_param_t tpmParam;
 
     /* Enable clock for PORTC */
     CLOCK_EnableClock(kCLOCK_PortC);
 
-    /* Configure buzzer pin as GPIO output (Active High: start LOW/silent) */
-    PORT_SetPinMux(BUZZER_PORT, BUZZER_PIN, kPORT_MuxAsGpio);
-    gpioConfig.pinDirection = kGPIO_DigitalOutput;
-    gpioConfig.outputLogic = 0U;  /* Start OFF (Active HIGH buzzer) */
-    GPIO_PinInit(BUZZER_GPIO, BUZZER_PIN, &gpioConfig);
+    /* Configure PTC5 pin multiplexer as ALT5 (TPM1_CH4) */
+    PORT_SetPinMux(BUZZER_PORT, BUZZER_PIN, kPORT_MuxAlt5);
 
-    Serial_Print("[GPIO]      PTC5 (Active Buzzer Pin) -> INITIALIZED\r\n", gAllowToBlock_d);
-    Serial_Print("[BUZZER]    Non-Blocking Timer Engine (PTC5) -> SUCCESS\r\n", gAllowToBlock_d);
+    /* Select FRO 6M as clock source for TPM1 */
+    CLOCK_SetIpSrc(kCLOCK_Tpm1, kCLOCK_IpSrcFro6M);
+
+    /* Initialize TPM1 */
+    TPM_GetDefaultConfig(&tpmInfo);
+    TPM_Init(BUZZER_TPM_BASE, &tpmInfo);
+
+    /* Configure Channel 4 for Edge-Aligned 50% PWM at 2.7 kHz */
+    tpmParam.chnlNumber = BUZZER_TPM_CHNL;
+#if (defined(FSL_FEATURE_TPM_HAS_PAUSE_LEVEL_SELECT) && FSL_FEATURE_TPM_HAS_PAUSE_LEVEL_SELECT)
+    tpmParam.pauseLevel = kTPM_ClearOnPause;
+#endif
+    tpmParam.level = kTPM_HighTrue;
+    tpmParam.dutyCyclePercent = 50U;
+
+    (void)TPM_SetupPwm(BUZZER_TPM_BASE, &tpmParam, 1U, kTPM_EdgeAlignedPwm,
+                       BUZZER_PWM_FREQ_HZ, BUZZER_TPM_SRC_CLK);
+
+    /* Ensure buzzer starts OFF */
+    Buzzer_PwmOff();
+
+    Serial_Print("[PWM]       PTC5 -> TPM1_CH4 (2.7 kHz Buzzer PWM) -> INITIALIZED\r\n", gAllowToBlock_d);
+    Serial_Print("[BUZZER]    Hardware PWM Tone Engine -> SUCCESS\r\n", gAllowToBlock_d);
 }
 
 static void BleApp_RfidInit(void)
